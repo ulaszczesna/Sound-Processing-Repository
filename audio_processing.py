@@ -24,16 +24,19 @@ def plot_waveform(data, rate):
     fig.update_layout(title="Waveform", xaxis_title="Time [s]", yaxis_title="Amplitude")
     return fig
 
-def detect_silence(data, rate, threshold=0.02):
+def detect_silence(data, rate):
     frame_size = int(0.02 * rate)  # 20 ms
     silence_frames = []
+
+    # computing threshold as 2% of the maximum amplitude
+    threshold = 0.02 * np.max(data)
 
     for i in range(0, len(data) - frame_size, frame_size):
         frame = data[i: i + frame_size]
         avg_energy = np.mean(np.abs(frame))
         if avg_energy < threshold:
             silence_frames.append(i)
-        
+    print(silence_frames)
     return silence_frames, frame_size
 
 def plot_silence(data, rate, silence_frames, frame_size):
