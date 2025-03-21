@@ -24,8 +24,8 @@ def plot_waveform(data, rate):
     fig.update_layout(title="Waveform", xaxis_title="Time [s]", yaxis_title="Amplitude")
     return fig
 
-def detect_silence(data, rate):
-    frame_size = int(0.02 * rate)  # 20 ms
+def detect_silence(data, rate, frame_ms=20):
+    frame_size = int(frame_ms* rate / 1000)  # 20 ms
     silence_frames = []
 
     # computing threshold as 2% of the maximum amplitude
@@ -69,20 +69,20 @@ def plot_frame_features(rms_values, mean_values, var_values, frame_size, rate):
                       xaxis_title="Time [s]", yaxis_title="Value")
     return fig
 
-def compute_frame_features(data, rate, frame_duration=0.02):
+def compute_frame_features(data, rate, frame_ms=20):
     # """ Oblicza parametry w dziedzinie czasu na poziomie ramki """
-    frame_size = int(frame_duration * rate)
+    frame_size = int(frame_ms * rate / 1000)  
     num_frames = len(data) // frame_size
 
     rms_values = []
     mean_values = []
     var_values = []
+    amplitude_values = []
 
     for i in range(num_frames):
         frame = data[i * frame_size: (i + 1) * frame_size]
-        rms_values.append(np.sqrt(np.mean(frame ** 2)))
-        mean_values.append(np.mean(frame))
-        var_values.append(np.var(frame))
+        
+        amplitude_values.append(np.sqrt(np.mean(frame ** 2)))
 
     return rms_values, mean_values, var_values, frame_size
 
@@ -90,8 +90,8 @@ def autocorrelation(frame):
     corr = np.correlate(frame, frame, mode='full')
     return corr[len(corr) // 2:]
 
-def compute_f0_autocorrelation(data, rate, frame_duration=0.02, min_f0=50, max_f0=400):
-    frame_size = int(frame_duration * rate)
+def compute_f0_autocorrelation(data, rate, frame_ms=20, min_f0=50, max_f0=400):
+    frame_size = int(frame_ms * rate / 1000)
     num_frames = len(data) // frame_size
     f0_values = []
 
@@ -126,18 +126,46 @@ def compute_voiced_unvoiced(f0_values):
     voiced = [1 if f0 > 0 else 0 for f0 in f0_values]
     return voiced
 
-def plot_voiced_unvoiced(voiced, frame_size, rate):
-    time = np.arange(len(voiced)) * (frame_size / rate)
+def plot_voiced_unvoiced(data, rate, f0_values, frame_size):
+    duration = len(data) / rate
+    time = np.linspace(0., duration, len(data))
+    
+    voiced = compute_voiced_unvoiced(f0_values)  # Zamiana F0 na 0/1 (voiced/unvoiced)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=voiced, mode='lines', name="Voiced/Unvoiced", line=dict(color='black')))
-    
-    fig.update_layout(title="Voiced/Unvoiced Segmentation",
-                      xaxis_title="Time [s]", yaxis_title="Voiced/Unvoiced")
+    fig.add_trace(go.Scatter(x=time, y=data, mode='lines', name="Audio Waveform"))
+
+    for i, is_voiced in enumerate(voiced):
+        if is_voiced:  # Jeśli fragment jest voiced
+            start_time = (i * frame_size) / rate
+            end_time = ((i + 1) * frame_size) / rate
+            fig.add_shape(
+                type="rect", x0=start_time, x1=end_time, y0=-1, y1=1,
+                fillcolor="blue", opacity=0.2, layer="below", line_width=0
+            )
+
+    # Dodanie "fałszywego" trace do legendy dla Voiced
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None], mode='markers',
+        marker=dict(size=10, color="blue", opacity=0.2),
+        name="Voiced Region"
+    ))
+
+    fig.update_layout(title="Voiced/Unvoiced Segmentation", 
+                      xaxis_title="Time [s]", yaxis_title="Amplitude",
+                      legend=dict(x=0, y=1))  # Pozycja legendy w lewym górnym rogu
     return fig
 
 
+# clip features
+
 def compute_clip_features(data):
+    volume = np.sqrt(np.mean(data ** 2))
+    max_volume = np.max(volume)
+    min_volume = np.min(volume)
+    vstd = np.std(data)/max_volume
+    vdr = (max_volume - min_volume)/max_volume
+    #vu = 
     rms = np.sqrt(np.mean(data ** 2))
     mean = np.mean(data)
     var = np.var(data)
@@ -145,6 +173,9 @@ def compute_clip_features(data):
     min_amplitude = np.min(data)
     energy = np.sum(data ** 2)
     return rms, mean, var, max_amplitude, min_amplitude, energy
+
+
+
 
 def classify_speech_music(f0_values):
     speech_threshold = 150

@@ -17,7 +17,8 @@ if uploaded_file is not None:
     normalize = st.sidebar.checkbox('Normalize audio', False)
     if normalize:
         data = normalize_audio(data)
-
+    frame_ms = st.sidebar.slider('Frame size (ms)', 10, 50, 20)
+    frame_size = int(frame_ms * rate / 1000)
     
     st.write(f'📌 **Częstotliwość próbkowania:** {rate} Hz')
     st.audio(uploaded_file)
@@ -28,20 +29,20 @@ if uploaded_file is not None:
 
     silence = st.sidebar.toggle('Silence detection', False)
     if silence:
-        silence_frames, frame_size = detect_silence(data, rate)
+        silence_frames, frame_size = detect_silence(data, rate, frame_ms)
         st.subheader('🔇 Silence Detection')
         st.plotly_chart(plot_silence(data, rate, silence_frames, frame_size))
     
 
     paremeters = st.sidebar.toggle('Frame parameters', False)
-    rms_values, mean_values, var_values, frame_size = compute_frame_features(data, rate)
+    rms_values, mean_values, var_values, frame_size = compute_frame_features(data, rate, frame_ms)
     if paremeters:
         
         st.subheader('📈 Frame parameters (RMS, Mean, Variance)')
         st.plotly_chart(plot_frame_features(rms_values, mean_values, var_values, frame_size, rate))
     
     fundamental_frequency = st.sidebar.toggle('Fundamental Frequency (F0)', False)
-    f0_values, frame_size = compute_f0_autocorrelation(data, rate)
+    f0_values, frame_size = compute_f0_autocorrelation(data, rate, frame_ms)
     if fundamental_frequency:
         
         st.subheader('🎶 Fundamental Frequency (F0)')
@@ -49,9 +50,9 @@ if uploaded_file is not None:
     
     voiced_unvoiced = st.sidebar.toggle('Voiced/Unvoiced detection', False)
     if voiced_unvoiced:
-        voiced = compute_voiced_unvoiced(f0_values)
+        #voiced = compute_voiced_unvoiced(f0_values)
         st.subheader('🎤 Voiced/Unvoiced')
-        st.plotly_chart(plot_voiced_unvoiced(voiced, frame_size, rate))
+        st.plotly_chart(plot_voiced_unvoiced(data, rate, f0_values, frame_size))
 
     st.sidebar.header('Detailed information:')  
     details = st.sidebar.checkbox('Show detailed information about the audio clip', False)
