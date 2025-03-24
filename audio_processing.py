@@ -24,19 +24,22 @@ def plot_waveform(data, rate):
     fig.update_layout(title="Waveform", xaxis_title="Time [s]", yaxis_title="Amplitude")
     return fig
 
-def detect_silence(data, rate, frame_ms=20):
+
+
+def detect_silence(data, rate, frame_ms=20, percentage=5, zcr_threshold=0.3):
     frame_size = int(frame_ms* rate / 1000)  # 20 ms
     silence_frames = []
 
     # computing threshold as 2% of the maximum amplitude
-    threshold = 0.02 * np.max(data)
+    threshold = percentage* 0.01 * np.max(np.sqrt(np.mean(data ** 2)))
 
     for i in range(0, len(data) - frame_size, frame_size):
         frame = data[i: i + frame_size]
-        avg_energy = np.mean(np.abs(frame))
-        if avg_energy < threshold:
+        avg_loudnes = np.sqrt(np.mean(frame ** 2))
+        zcr = np.mean(np.abs(np.diff(np.sign(frame)))) / 2
+        if avg_loudnes < threshold and zcr < zcr_threshold:
             silence_frames.append(i)
-    print(silence_frames)
+
     return silence_frames, frame_size
 
 def plot_silence(data, rate, silence_frames, frame_size):
@@ -90,7 +93,7 @@ def autocorrelation(frame):
     corr = np.correlate(frame, frame, mode='full')
     return corr[len(corr) // 2:]
 
-def compute_f0_autocorrelation(data, rate, frame_ms=20, min_f0=50, max_f0=400):
+def compute_f0_autocorrelation(data, rate, frame_ms = 20, min_f0=50, max_f0=400):
     frame_size = int(frame_ms * rate / 1000)
     num_frames = len(data) // frame_size
     f0_values = []
@@ -111,6 +114,8 @@ def compute_f0_autocorrelation(data, rate, frame_ms=20, min_f0=50, max_f0=400):
             f0_values.append(0)
 
     return f0_values, frame_size
+
+
 
 def plot_f0(f0_values, frame_size, rate):
     time = np.arange(len(f0_values)) * (frame_size / rate)
@@ -158,22 +163,81 @@ def plot_voiced_unvoiced(data, rate, f0_values, frame_size):
 
 
 # clip features
+    
 
-def compute_clip_features(data):
-    volume = np.sqrt(np.mean(data ** 2))
-    max_volume = np.max(volume)
-    min_volume = np.min(volume)
-    vstd = np.std(data)/max_volume
-    vdr = (max_volume - min_volume)/max_volume
-    #vu = 
-    rms = np.sqrt(np.mean(data ** 2))
-    mean = np.mean(data)
-    var = np.var(data)
-    max_amplitude = np.max(data)
-    min_amplitude = np.min(data)
-    energy = np.sum(data ** 2)
-    return rms, mean, var, max_amplitude, min_amplitude, energy
+def compute_LSTER(data, rate, frame_ms=20, window_s=1):
+    frame_size = int(frame_ms * rate / 1000)
+    window_size = int(window_s * rate/ frame_size)
 
+    num_frames = len(data) // frame_size
+    ste_values = []
+
+    for i in range(num_frames):
+        frame = data[i * frame_size: (i + 1) * frame_size]
+        ste_values.append(np.sum(frame ** 2))
+
+    lster_values = []
+    for i in range(num_frames - window_size + 1):
+        window_ste = ste_values[i: i + window_size]
+        ste_mean = np.mean(window_ste)
+        low_energy_count = sum(ste < 0.5 * ste_mean for ste in window_ste)
+        lster = low_energy_count / window_size
+        lster_values.append(lster)
+
+    return lster_values, frame_size
+
+def Zstd(data, rate, frame_ms=20):
+    frame_size = int(frame_ms * rate / 1000)
+    num_frames = len(data) // frame_size
+    std_values = []
+    for i in range(num_frames):
+        frame = data[i * frame_size: (i + 1) * frame_size]
+        std_values.append(np.std(frame))
+    return std_values
+
+def compute_clip_features(data, rate, frame_ms=20):
+    frame_size = int(frame_ms * rate / 1000)
+    num_frames = len(data) // frame_size
+    volumes = []
+    for i in range(num_frames):
+        frame = data[i * frame_size: (i + 1) * frame_size]
+        volumes.append(np.sqrt(np.mean(frame ** 2)))
+    max_volume = np.max(volumes)
+    print(max_volume)
+    min_volume = np.min(volumes)
+    print(min_volume)
+    vstd = np.std(volumes) / max_volume if max_volume != 0 else 0
+    vdr = (max_volume - min_volume) / max_volume if max_volume != 0 else 0
+    
+    # Volume Undulation (VU)
+    frame_rms = [
+        np.sqrt(np.mean(data[i : i + frame_size] ** 2))
+        for i in range(0, len(data) - frame_size, frame_size)
+    ]
+    vu = np.std(frame_rms) / np.mean(frame_rms) if np.mean(frame_rms) != 0 else 0
+    
+    # Low Short-Time Energy Ratio (LSTER)
+    lster_values, frame_size = compute_LSTER(data, rate, frame_ms=frame_ms)
+
+
+
+    return vstd, vdr, vu, lster_values, frame_size
+
+
+import matplotlib.pyplot as plt
+
+def display_clip_features(data, rate, frame_ms=20):
+    vstd, vdr, vu, lster_values, frame_size = compute_clip_features(data, rate, frame_ms)
+
+
+    # Jeśli mamy wartości LSTER, narysujmy je
+    if lster_values:
+        time_axis = np.arange(len(lster_values)) * (frame_size / rate)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=time_axis, y=lster_values, mode='lines', name="LSTER"))
+        fig.update_layout(title="Low Short-Time Energy Ratio (LSTER)", xaxis_title="Time [s]", yaxis_title="LSTER")
+        
+        return fig
 
 
 
