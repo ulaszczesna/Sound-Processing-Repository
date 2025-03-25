@@ -1,14 +1,12 @@
 import numpy as np
 import plotly.graph_objects as go
-import scipy.io.wavfile as wav
+import librosa
 import streamlit as st
-import soundfile as sf
+
 
 
 def load_audio(file):
-    data, rate = sf.read(file)
-    if len(data.shape) > 1:
-        data = np.mean(data, axis=1)  # Konwersja na mono
+    data, rate = librosa.load(file, sr=None)
     return rate, data
 
 def normalize_audio(data):
@@ -24,23 +22,53 @@ def plot_waveform(data, rate):
     fig.update_layout(title="Waveform", xaxis_title="Time [s]", yaxis_title="Amplitude")
     return fig
 
+def split_into_frames(data, rate, frame_ms=20):
+    frame_size = int(frame_ms * rate / 1000)
+    num_frames = len(data) // frame_size
+    frames = np.array([data[i * frame_size: (i + 1) * frame_size] for i in range(num_frames)])
+    return frames, frame_size
+
 
 
 def detect_silence(data, rate, frame_ms=20, percentage=5, zcr_threshold=0.3):
-    frame_size = int(frame_ms* rate / 1000)  # 20 ms
+    frames, frame_size = split_into_frames(data, rate, frame_ms)
     silence_frames = []
-
-    # computing threshold as 2% of the maximum amplitude
+    
     threshold = percentage* 0.01 * np.max(np.sqrt(np.mean(data ** 2)))
-
-    for i in range(0, len(data) - frame_size, frame_size):
-        frame = data[i: i + frame_size]
+    for i, frame in enumerate(frames):
         avg_loudnes = np.sqrt(np.mean(frame ** 2))
-        zcr = np.mean(np.abs(np.diff(np.sign(frame)))) / 2
+        zcr = np.mean(np.abs(np.diff(np.sign(frame)))) 
         if avg_loudnes < threshold and zcr < zcr_threshold:
-            silence_frames.append(i)
+            silence_frames.append(i * frame_size)
+   
+    
+    
 
     return silence_frames, frame_size
+
+def loudness(data, rate, frame_ms=20):
+    frames, frame_size = split_into_frames(data, rate, frame_ms)
+    frame_loudnes = []
+    frames = np.array(frames)
+    for frame in frames:
+        energy = np.sum(frame ** 2)
+        mean_energy = energy / frame_size
+        loudness = np.sqrt(mean_energy)
+        frame_loudnes.append(loudness)
+    
+    
+    return frame_loudnes, frame_size
+
+def plot_loudness(data, rate, frame_ms=20):
+    duration = len(data) / rate
+    
+    frame_loudnes, frame_size = loudness(data, rate, frame_ms)
+    time_loudness = np.arange(len(frame_loudnes)) * (frame_size / rate)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time_loudness, y=frame_loudnes, mode='lines', name="loudness"))
+    fig.update_layout(title="Loudness", xaxis_title="Time [s]", yaxis_title="Loudness")
+    return fig
 
 def plot_silence(data, rate, silence_frames, frame_size):
     duration = len(data) / rate
@@ -58,6 +86,46 @@ def plot_silence(data, rate, silence_frames, frame_size):
         )
 
     fig.update_layout(title="Silence Detection", xaxis_title="Time [s]", yaxis_title="Amplitude")
+    return fig
+
+def short_time_energy(data, rate, frame_ms = 20):
+    frames, frame_size = split_into_frames(data, rate, frame_ms)
+    frame_energy = []
+    for frame in frames:
+        energy = np.sum(frame ** 2)
+        mean_energy = energy / frame_size
+        frame_energy.append(mean_energy)
+
+    return frame_energy, frame_size
+
+
+def plot_short_time_energy(data, rate, frame_ms=20):
+
+    frame_energy, frame_size = short_time_energy(data, rate, frame_ms)
+
+    time_energy = np.arange(len(frame_energy)) * (frame_size / rate)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time_energy, y=frame_energy, mode='lines', name="Short-Time Energy"))
+    fig.update_layout(title="Short-Time Energy", xaxis_title="Time [s]", yaxis_title="Energy")
+    return fig
+
+def zero_crossing_rate(data, rate, frame_ms=20):
+    frames, frame_size = split_into_frames(data, rate, frame_ms)
+    zcr_values = []
+    for frame in frames:
+        zcr = np.mean(np.abs(np.diff(np.sign(frame))))
+        zcr_values.append(zcr)
+
+    return zcr_values, frame_size
+
+def plot_zero_crossing_rate(data, rate, frame_ms=20):
+    zcr_values, frame_size = zero_crossing_rate(data, rate, frame_ms)
+    time = np.arange(len(zcr_values)) * (frame_size / rate)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time, y=zcr_values, mode='lines', name="Zero Crossing Rate", line=dict(color='purple')))
+    fig.update_layout(title="Zero Crossing Rate", xaxis_title="Time [s]", yaxis_title="ZCR")
     return fig
 
 def plot_frame_features(rms_values, mean_values, var_values, frame_size, rate):
@@ -114,8 +182,6 @@ def compute_f0_autocorrelation(data, rate, frame_ms = 20, min_f0=50, max_f0=400)
             f0_values.append(0)
 
     return f0_values, frame_size
-
-
 
 def plot_f0(f0_values, frame_size, rate):
     time = np.arange(len(f0_values)) * (frame_size / rate)
