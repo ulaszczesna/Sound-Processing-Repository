@@ -4,7 +4,7 @@ import pandas as pd
 from audio_processing import load_audio, plot_waveform, detect_silence, plot_silence, plot_frame_features, plot_f0, plot_voiced_unvoiced, compute_f0_autocorrelation, save_to_csv
 from audio_processing import compute_frame_features,  normalize_audio
 from audio_processing import  plot_loudness, plot_short_time_energy, plot_zero_crossing_rate
-from clip_audio_processing import vstd, vdr, vu, lster, energy_entropy
+from clip_audio_processing import plot_hzcrr, plot_lster, plot_speach_music, vstd, vdr, vu, lster, energy_entropy
 
 st.title('🎵 Audio Analysis App')
 
@@ -53,6 +53,11 @@ if uploaded_file is not None:
         st.subheader('🔋 Short-Time Energy (STE)')
         st.plotly_chart(plot_short_time_energy(data, rate, frame_ms))
 
+    speach_music = st.sidebar.toggle('Speech/Music detection', False)
+    if speach_music:
+        st.subheader('🎤🎵 Speech/Music detection')
+        st.plotly_chart(plot_speach_music(data, rate, frame_ms))
+
     paremeters = st.sidebar.toggle('Frame parameters', False)
     rms_values, mean_values, var_values, frame_size = compute_frame_features(data, rate, frame_ms)
     if paremeters:
@@ -81,21 +86,28 @@ if uploaded_file is not None:
 
     st.sidebar.header('Detailed information:')  
     details = st.sidebar.checkbox('Show detailed information about the audio clip', False)
-    if details:
+    # length of audio
+    time = len(data) / rate
+    st.write(f'🕒 **Czas trwania:** {time:.2f} s')
+    
+
+    if details and time > 2:
         st.subheader('📊 Detailed information about the audio clip')
         vstd_value = vstd(data, rate)
         vdr_value = vdr(data, rate)
-        #vu_value = vu(data, rate)
-        #lster_values = lster(data, rate)
+        vu_value = vu(data, rate)
         entropy = energy_entropy(data, rate)
         data_table = pd.DataFrame({
             'Volume Standard Deviation (VSTD)': [vstd_value],
             'Volume Dynamic Range (VDR)': [vdr_value],
-            # 'Volume Undulation (VU)': [vu_value],
-            #'Log Short-Time Energy Ratio (LSTER)': [lster_values],
+             'Volume Undulation (VU)': [vu_value],
             'Energy Entropy': [entropy]
         })
         st.table(data_table)
+        st.plotly_chart(plot_lster(data, rate, frame_ms))
+        st.plotly_chart(plot_hzcrr(data, rate, frame_ms))
+    elif details and time <= 2:
+        st.error('Audio clip is too short to calculate detailed information')
        
         # vstd, vdr, vu, lster_values, frame_size = compute_clip_features(data, rate, frame_ms)
         

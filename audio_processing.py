@@ -223,8 +223,7 @@ def plot_voiced_unvoiced(data, rate, f0_values, frame_size):
     ))
 
     fig.update_layout(title="Voiced/Unvoiced Segmentation", 
-                      xaxis_title="Time [s]", yaxis_title="Amplitude",
-                      legend=dict(x=0, y=1))  # Pozycja legendy w lewym górnym rogu
+                      xaxis_title="Time [s]", yaxis_title="Amplitude")  # Pozycja legendy w lewym górnym rogu
     return fig
 
 
