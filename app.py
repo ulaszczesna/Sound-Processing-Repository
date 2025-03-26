@@ -110,16 +110,16 @@ if uploaded_file is not None:
         st.table(data_table)
         st.text('Save detailed information to CSV file or txt file')
         
-        file_format = st.radio("Wybierz format pliku do zapisania:", ('.csv', '.txt'))
+        file_format = st.radio("Choose file format:", ('.csv', '.txt'))
 
 # Przycisk do zapisu tabeli
-        if st.button("📥 Pobierz tabelę"):
+        if st.button("📥 Download data"):
             # Zapisujemy tabelę w wybranym formacie
             file_name = f"audio_analysis_results{file_format}"
             save_to_csv(file_name, data_table)
-            st.success(f"Plik {file_name} został zapisany!")
+            st.success(f"File {file_name} saved!")
             with open(file_name, "rb") as file:
-                st.download_button(label="Kliknij, aby pobrać plik", data=file, file_name=file_name, mime="text/csv" if file_format == '.csv' else "text/plain")
+                st.download_button(label="Click to download file", data=file, file_name=file_name, mime="text/csv" if file_format == '.csv' else "text/plain")
         st.plotly_chart(plot_lster(data, rate, frame_ms))
         st.plotly_chart(plot_hzcrr(data, rate, frame_ms))
        
