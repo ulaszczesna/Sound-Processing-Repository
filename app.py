@@ -92,7 +92,7 @@ if uploaded_file is not None:
     details = st.sidebar.checkbox('Show detailed information about the audio clip', False)
     # length of audio
     time = len(data) / rate
-    st.write(f'🕒 **Czas trwania:** {time:.2f} s')
+    st.write(f'🕒 **Audio duration:** {time:.2f} s')
     
 
     if details and time > 2:
