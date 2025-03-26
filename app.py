@@ -2,10 +2,10 @@ import io
 import streamlit as st
 import soundfile as sf
 import pandas as pd
-from audio_processing import load_audio, plot_waveform, detect_silence, plot_silence, plot_frame_features, plot_f0, plot_voiced_unvoiced, compute_f0_autocorrelation, save_to_csv
+from audio_processing import load_audio, plot_waveform, detect_silence, plot_silence, plot_f0, plot_voiced_unvoiced, compute_f0_autocorrelation, save_to_csv
 from audio_processing import  normalize_audio
-from audio_processing import  plot_loudness, plot_short_time_energy, plot_zero_crossing_rate
-from clip_audio_processing import plot_hzcrr, plot_lster, plot_speach_music, vstd, vdr, vu, lster, energy_entropy
+from audio_processing import  plot_loudness, plot_short_time_energy, plot_zero_crossing_rate, estimate_f0_amdf
+from clip_audio_processing import plot_hzcrr, plot_lster, plot_speach_music, vstd, vdr, vu, energy_entropy
 
 st.title('🎵 Audio Analysis App')
 
@@ -64,14 +64,20 @@ if uploaded_file is not None:
 
     
     fundamental_frequency = st.sidebar.toggle('Fundamental Frequency (F0)', False)
-    f0_values, frame_size = compute_f0_autocorrelation(data, rate, frame_ms)
-    print('f0')
+    
+
     #f0_values, frame_size = compute_f0_amdf(data, rate, frame_ms)
     if fundamental_frequency:
-        
+        # choose method
+        st.sidebar.write('Choose method:')
+        option = st.sidebar.selectbox('Method:', ['Autocorrelation', 'AMDF'])
+
+        if option == 'Autocorrelation':
+            f0_values, frame_size = compute_f0_autocorrelation(data, rate, frame_ms)
+        elif option == 'AMDF':
+            f0_values, frame_size = estimate_f0_amdf(data, rate, frame_ms)
         st.subheader('🎶 Fundamental Frequency (F0)')
-        print('chart')
-        print(f0_values)
+   
         st.plotly_chart(plot_f0(f0_values, frame_size, rate))
     
     voiced_unvoiced = st.sidebar.toggle('Voiced/Unvoiced detection', False)
