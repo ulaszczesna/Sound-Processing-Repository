@@ -114,7 +114,7 @@ def zero_crossing_rate(data, rate, frame_ms=20):
     frames, frame_size = split_into_frames(data, rate, frame_ms)
     zcr_values = []
     for frame in frames:
-        zcr = np.mean(np.abs(np.diff(np.sign(frame))))
+        zcr = np.mean(np.abs(np.diff(np.sign(frame)))) 
         zcr_values.append(zcr)
 
     return zcr_values, frame_size
@@ -193,16 +193,28 @@ def plot_f0(f0_values, frame_size, rate):
                       xaxis_title="Time [s]", yaxis_title="Frequency [Hz]")
     return fig
 
-def compute_voiced_unvoiced(f0_values):
-    voiced = [1 if f0 > 0 else 0 for f0 in f0_values]
-    return voiced
+def compute_voiced_unvoiced(data, rate, frame_ms=20, ste_threshold=0.02, zcr_threshold=0.1):
+    ste, frame_size = short_time_energy(data, rate, frame_ms)
+    zcr, _ = zero_crossing_rate(data, rate, frame_ms)
 
-def plot_voiced_unvoiced(data, rate, f0_values, frame_size):
+    if len(ste) == 0 or len(zcr) == 0:
+        return np.array([]), frame_size
+
+    # Klasyfikacja na podstawie stałych progów
+    voiced = np.array([
+        1 if ste[i] > ste_threshold and zcr[i] < zcr_threshold else 0
+        for i in range(len(ste))
+    ])
+
+    return voiced, frame_size
+    
+
+def plot_voiced_unvoiced(data, rate, frame_ms=20, ste_threshold= 0.02, zcr_threshold=0.1):
     duration = len(data) / rate
     time = np.linspace(0., duration, len(data))
     
-    voiced = compute_voiced_unvoiced(f0_values)  # Zamiana F0 na 0/1 (voiced/unvoiced)
-
+    voiced, frame_size = compute_voiced_unvoiced(data, rate, frame_ms, ste_threshold, zcr_threshold)  # Zamiana F0 na 0/1 (voiced/unvoiced)
+  
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=time, y=data, mode='lines', name="Audio Waveform"))
 
@@ -268,9 +280,7 @@ def compute_clip_features(data, rate, frame_ms=20):
         frame = data[i * frame_size: (i + 1) * frame_size]
         volumes.append(np.sqrt(np.mean(frame ** 2)))
     max_volume = np.max(volumes)
-    print(max_volume)
     min_volume = np.min(volumes)
-    print(min_volume)
     vstd = np.std(volumes) / max_volume if max_volume != 0 else 0
     vdr = (max_volume - min_volume) / max_volume if max_volume != 0 else 0
     
