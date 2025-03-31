@@ -1,5 +1,6 @@
 import streamlit as st
 from audio_processing import *
+from window_functions import *
 
 st.title('🎵 Audio Analysis App')
 
@@ -33,4 +34,18 @@ if uploaded_file is not None:
         volume, frame_size, volume_plot = volume(data, rate, frame_ms, plot=True)
         st.plotly_chart(volume_plot)
     #st.plotly_chart(plot_spectrum(spectrum, rate, frame_size))
+
+    st.sidebar.subheader('Window Functions')
+    frame_size = 
+    window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
+                                                            'hamming', 'hann'))
+
+    if window_function == 'rectangular':
+        pass
+    elif window_function == 'hamming':
+        pass
+    elif window_function == 'hann':
+        pass
+    elif window_function == 'triangular':
+        pass
 
