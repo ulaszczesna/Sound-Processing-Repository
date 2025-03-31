@@ -1,2 +1,0 @@
-Volume Standard Deviation (VSTD)	Volume Dynamic Range (VDR)	Volume Undulation (VU)	Energy Entropy
-0.17298299	0.57665443	0.1263682	0.5631089
