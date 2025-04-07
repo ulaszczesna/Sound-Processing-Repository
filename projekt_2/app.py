@@ -8,6 +8,7 @@ uploaded_file = st.file_uploader("📂 Wybierz plik WAV", type="wav")
 
 if uploaded_file is not None:
     rate, data = load_audio(uploaded_file)
+    audio_duration = len(data) / rate
 
     
 
@@ -17,16 +18,20 @@ if uploaded_file is not None:
         data = normalize_audio(data)
     frame_ms = st.sidebar.slider('Frame size (ms)', 10, 50, 20)
     frame_size = int(frame_ms * rate / 1000)
+    time_range = st.sidebar.slider("Select time range (s)", 0.0, float(audio_duration), (0.0, float(audio_duration)), step=0.1)
+
+    start_sample = int(time_range[0] * rate)
+    end_sample = int(time_range[1] * rate)
     
     st.write(f'📌 **Częstotliwość próbkowania:** {rate} Hz')
     st.audio(uploaded_file)
 
     st.subheader('📊 Wavefrom')
-    st.plotly_chart(plot_waveform(data, rate))
+    st.plotly_chart(plot_waveform(data, rate, start_sample, end_sample))
 
     st.subheader('📊 Continuous Spectrum')
-    spectrum, _ = continous_spectrum(data, rate, frame_ms)
-    st.plotly_chart(plot_fft_signal(data, rate))
+    spectrum, _ = continous_spectrum(data, rate, frame_ms, start_sample, end_sample)
+    st.plotly_chart(plot_spectrum(spectrum, rate, frame_size))
 
     volume_plot = st.sidebar.checkbox('Volume plot', False)
     if volume_plot:
@@ -36,16 +41,21 @@ if uploaded_file is not None:
     #st.plotly_chart(plot_spectrum(spectrum, rate, frame_size))
 
     st.sidebar.subheader('Window Functions')
-    frame_size = 
+    
+    
     window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
                                                             'hamming', 'hann'))
-
-    if window_function == 'rectangular':
-        pass
-    elif window_function == 'hamming':
-        pass
-    elif window_function == 'hann':
-        pass
-    elif window_function == 'triangular':
-        pass
+    window_processor = SignalProcessor(data)
+    windowed_signal, frame = window_processor.apply_window(window_function, frame_start=start_sample, frame_end=end_sample)
+    st.subheader('📊 Windowed Signal')
+    st.plotly_chart(plot_fft_signal(windowed_signal, rate))
+    st.plotly_chart(plot_waveform(windowed_signal, rate))
+    # if window_function == 'rectangular':
+    #     pass
+    # elif window_function == 'hamming':
+    #     pass
+    # elif window_function == 'hann':
+    #     pass
+    # elif window_function == 'triangular':
+    #     pass
 

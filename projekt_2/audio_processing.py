@@ -9,7 +9,10 @@ def load_audio(file):
 def normalize_audio(data):
     return data / max(data)
 
-def continous_spectrum(data, rate, frame_ms=20):
+def continous_spectrum(data, rate, frame_ms=20, frame_start=0, frame_end=None):
+    if frame_end is None:
+        frame_end = len(data)
+    data = data[frame_start:frame_end]
     frame_size = int(frame_ms * rate / 1000)
     num_frames = len(data) // frame_size
     frames = np.array([data[i * frame_size: (i + 1) * frame_size] for i in range(num_frames)])
@@ -33,12 +36,19 @@ def plot_fft_signal(data, rate):
     fig.update_layout(title="FFT Signal", xaxis_title="Frequency [Hz]", yaxis_title="Magnitude")
     return fig
 
-def plot_waveform(data, rate):
+def plot_waveform(data, rate, start=0, end=None):
+    if end is None:
+        end = len(data)
     duration = len(data) / rate
     time = np.linspace(0, duration, len(data))
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=time, y=data, mode='lines', name="Audio Waveform"))
+    fig.add_shape(
+        type="rect", x0=start / rate, y0=-1, x1=end / rate, y1=1,
+        fillcolor="purple", opacity=0.2, line_width=0, layer="below",
+        name="Selected Range"
+    )
     fig.update_layout(title="Waveform", xaxis_title="Time [s]", yaxis_title="Amplitude")
     return fig
 

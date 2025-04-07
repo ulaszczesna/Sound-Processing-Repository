@@ -1,45 +1,49 @@
 import numpy as np
-import plotly.graph_objects as go
 
-def apply_window(data, window_type, frame_start=0, frame_size=None):
-    if frame_size is None:
-        frame = data[frame_start:]
-    else:
-        frame = data[frame_start:frame_start + frame_size]
+class WindowFunction:
+    @staticmethod
+    def rectangular(N):
+        return np.ones(N)
 
-    N = len(frame)
+    @staticmethod
+    def hamming(N):
+        return 0.54 - 0.46 * np.cos(2 * np.pi * np.arange(N) / (N - 1))
 
-    # wybór funkcji okna
-    if window_type == 'rectangular':
-        window = np.ones(N)
-    elif window_type == 'hamming':
-        window = hamming_window(N)
-    elif window_type == 'hann':
-        window = Hann_window(N)
-    elif window_type == 'triangular':
-        window = traingular_window(N)
-    else:
-        raise ValueError("Not valid window type! Choose: rectangular, triangular, hamming, hann")
+    @staticmethod
+    def hann(N):
+        return 0.5 * (1 - np.cos(2 * np.pi * np.arange(N) / (N - 1)))
 
-    # zastosowanie okna 
-    windowed_signal = frame * window
+    @staticmethod
+    def triangular(N):
+        return 1 - np.abs((np.arange(N) - (N - 1) / 2) / ((N - 1) / 2))
 
-    return windowed_signal, 
 
-def hamming_window(N):
-    w = []
-    for n in range(N):
-        w.append(0.54 - 0.46 * np.cos(2 * np.pi * n / (N - 1)))
-    return np.array(w)
+class SignalProcessor:
+    def __init__(self, data):
+        self.data = data
 
-def Hann_window(N):
-    w = []
-    for n in range(N):
-        w.append(0.5(1 - np.cos((2 * np.pi * n)/(N-1))))
-    return np.array(w)
+    def apply_window(self, window_type, frame_start=0, frame_end=None):
+        if frame_end is None:
+            frame = self.data[frame_start:]
+        else:
+            frame = self.data[frame_start:frame_end]
 
-def traingular_window(N):
-    w = []
-    for n in range(N):
-        w.append(1 - np.abs((n - (N-1)/2) / ((N-1)/2)))
-    return w
+        N = len(frame)
+
+        window = self._get_window(window_type, N)
+
+        windowed_signal = frame * window
+        return windowed_signal, frame
+
+    def _get_window(self, window_type, N):
+        window_type = window_type.lower()
+        if window_type == 'rectangular':
+            return WindowFunction.rectangular(N)
+        elif window_type == 'hamming':
+            return WindowFunction.hamming(N)
+        elif window_type == 'hann':
+            return WindowFunction.hann(N)
+        elif window_type == 'triangular':
+            return WindowFunction.triangular(N)
+        else:
+            raise ValueError("Not valid window type! Choose: rectangular, triangular, hamming, hann")
