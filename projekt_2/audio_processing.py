@@ -52,6 +52,23 @@ def plot_waveform(data, rate, start=0, end=None):
     fig.update_layout(title="Waveform", xaxis_title="Time [s]", yaxis_title="Amplitude")
     return fig
 
+def plot_waveform_window(full_date, windowed_data, start, end, rate):
+    if end is None:
+        end = len(full_date)
+    duration = len(full_date) / rate
+    time_full = np.linspace(0, duration, len(full_date))
+    time_windowed = np.linspace(start / rate, end / rate,  len(windowed_data))
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time_full, y=full_date, mode='lines', name="Audio Waveform", opacity=0.8))
+    fig.add_trace(go.Scatter(x=time_windowed, y=windowed_data, mode='lines', name="Signal with Window Function", opacity=0.8))
+    fig.add_shape(
+        type="rect", x0=start / rate, y0=-1, x1=end / rate, y1=1,
+        fillcolor="purple", opacity=0.2, line_width=0, layer="below",
+        name="Selected Range"
+    )
+    fig.update_layout(title="Waveform", xaxis_title="Time [s]", yaxis_title="Amplitude")
+    return fig
+
 def split_into_frames(data, rate, frame_ms=20):
     frame_size = int(frame_ms * rate / 1000)
     num_frames = len(data) // frame_size

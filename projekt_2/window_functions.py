@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.fft import fft, fftfreq
 
 class WindowFunction:
     @staticmethod
@@ -16,11 +17,16 @@ class WindowFunction:
     @staticmethod
     def triangular(N):
         return 1 - np.abs((np.arange(N) - (N - 1) / 2) / ((N - 1) / 2))
+    
+    @staticmethod
+    def blackman(N):
+        return 0.42 - 0.5 * np.cos(2 * np.pi * np.arange(N) / (N - 1)) + 0.08 * np.cos(4 * np.pi * np.arange(N) / (N - 1))
 
 
 class SignalProcessor:
-    def __init__(self, data):
+    def __init__(self, data, sample_rate):
         self.data = data
+        self.sample_rate = sample_rate
 
     def apply_window(self, window_type, frame_start=0, frame_end=None):
         if frame_end is None:
@@ -45,5 +51,10 @@ class SignalProcessor:
             return WindowFunction.hann(N)
         elif window_type == 'triangular':
             return WindowFunction.triangular(N)
+        elif window_type == 'blackman':
+            return WindowFunction.blackman(N)
         else:
             raise ValueError("Not valid window type! Choose: rectangular, triangular, hamming, hann")
+        
+    
+

@@ -42,20 +42,14 @@ if uploaded_file is not None:
 
     st.sidebar.subheader('Window Functions')
     
+    window_on = st.sidebar.toggle('Window function', False)
+    if window_on:
+        window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
+                                                                'hamming', 'hann', 'blackman'))
+        window_processor = SignalProcessor(data, rate)
+        windowed_signal, frame = window_processor.apply_window(window_function, frame_start=start_sample, frame_end=end_sample)
+        st.subheader('📊 Windowed Signal')
+        st.plotly_chart(plot_fft_signal(windowed_signal, rate))
+        st.plotly_chart(plot_waveform_window(data, windowed_signal, start_sample, end_sample, rate))
     
-    window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
-                                                            'hamming', 'hann'))
-    window_processor = SignalProcessor(data)
-    windowed_signal, frame = window_processor.apply_window(window_function, frame_start=start_sample, frame_end=end_sample)
-    st.subheader('📊 Windowed Signal')
-    st.plotly_chart(plot_fft_signal(windowed_signal, rate))
-    st.plotly_chart(plot_waveform(windowed_signal, rate))
-    # if window_function == 'rectangular':
-    #     pass
-    # elif window_function == 'hamming':
-    #     pass
-    # elif window_function == 'hann':
-    #     pass
-    # elif window_function == 'triangular':
-    #     pass
 
