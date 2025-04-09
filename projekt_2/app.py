@@ -45,11 +45,22 @@ if uploaded_file is not None:
     window_on = st.sidebar.toggle('Window function', False)
     if window_on:
         window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
-                                                                'hamming', 'hann', 'blackman'))
+                                                                'hamming', 'hann', 'blackman'), key='window')
         window_processor = SignalProcessor(data, rate)
         windowed_signal, frame = window_processor.apply_window(window_function, frame_start=start_sample, frame_end=end_sample)
         st.subheader('📊 Windowed Signal')
         st.plotly_chart(plot_fft_signal(windowed_signal, rate))
         st.plotly_chart(plot_waveform_window(data, windowed_signal, start_sample, end_sample, rate))
     
-
+    spectrogram_on = st.sidebar.toggle('Spectrogram', False)
+    if spectrogram_on:
+        st.subheader('📊 Spectrogram')
+        window_processor = SignalProcessor(data, rate)
+        window_function_spect = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 'hamming', 'hann', 'blackman'), key='spectrogram')
+        frame_length = int(frame_ms * rate / 1000)
+        hop = st.sidebar.slider('Hop size (ms)', 1, 50, 10)
+        hop_size = int(hop * rate / 1000)
+        spectrogram_generator = SpectogramGenerator(window_processor)
+        spectrogram_data, frequencies, times = spectrogram_generator.generate(start_sample, end_sample, frame_length, hop_size, window_type=window_function_spect)
+        db = st.sidebar.checkbox('dB scale', True)
+        st.plotly_chart(spectrogram_generator.plot_spectrogram(db_scale=db))
