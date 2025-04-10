@@ -1,6 +1,7 @@
 import streamlit as st
 from audio_processing import *
 from window_functions import *
+from freqency_features import *
 
 st.title('🎵 Audio Analysis App')
 
@@ -33,11 +34,35 @@ if uploaded_file is not None:
     spectrum, _ = continous_spectrum(data, rate, frame_ms, start_sample, end_sample)
     st.plotly_chart(plot_spectrum(spectrum, rate, frame_size))
 
-    volume_plot = st.sidebar.checkbox('Volume plot', False)
-    if volume_plot:
-        st.subheader('📊 Volume')
-        volume, frame_size, volume_plot = volume(data, rate, frame_ms, plot=True)
-        st.plotly_chart(volume_plot)
+    fequency_features = st.sidebar.selectbox('Frequency features', options=('Volume', 'Frequency Centroid', 'Effective Bandwidth', 'Spectral Flatness Measure'), key='features')
+    frequency_feature = FreqencyDomainFeatures(data, rate, start=start_sample, end=end_sample, frame_ms=frame_ms)
+
+    st.subheader(f'📊 {fequency_features}')
+    if fequency_features == 'Volume':
+        volume = frequency_feature.volume()
+        volume_ploter = FrequencyDomainPlotter(frequency_feature)
+        st.plotly_chart(volume_ploter.plot_volume())
+
+    elif fequency_features == 'Frequency Centroid':
+        frequency_centroid = frequency_feature.frequency_centroid()
+        frequency_centroid_plotter = FrequencyDomainPlotter(frequency_feature)
+        st.plotly_chart(frequency_centroid_plotter.plot_frequency_centroid())
+
+    elif fequency_features == 'Effective Bandwidth':
+        effective_bandwidth = frequency_feature.effective_bandwith()
+        effective_bandwidth_plotter = FrequencyDomainPlotter(frequency_feature)
+        st.plotly_chart(effective_bandwidth_plotter.plot_effective_bandwidth())
+
+    elif fequency_features == 'Spectral Flatness Measure':
+        flatness_measure = frequency_feature.spectral_flatness_meassure()
+        flatness_measure_plotter = FrequencyDomainPlotter(frequency_feature)
+        st.plotly_chart(flatness_measure_plotter.plot_spectral_flatness_measure())
+
+ 
+    # if volume_plot:
+    #     st.subheader('📊 Volume')
+    #     volume, frame_size, volume_plot = volume(data, rate, frame_ms, plot=True)
+    #     st.plotly_chart(volume_plot)
     #st.plotly_chart(plot_spectrum(spectrum, rate, frame_size))
 
     st.sidebar.subheader('Window Functions')
