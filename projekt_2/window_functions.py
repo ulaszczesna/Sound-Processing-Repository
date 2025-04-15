@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.fft import fft, fftfreq
 import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 class WindowFunction:
     @staticmethod
@@ -29,11 +30,12 @@ class SignalProcessor:
         self.data = data
         self.sample_rate = sample_rate
 
-    def apply_window(self, window_type, frame_start=0, frame_end=None):
-        if frame_end is None:
-            frame = self.data[frame_start:]
-        else:
-            frame = self.data[frame_start:frame_end]
+    def apply_window(self, window_type, frame=None, frame_start=0, frame_end=None):
+        if frame is None:
+            if frame_end is None:
+                frame = self.data[frame_start:]
+            else:
+                frame = self.data[frame_start:frame_end]
 
         N = len(frame)
 
@@ -63,6 +65,26 @@ class SignalProcessor:
 class SpectogramGenerator:
     def __init__(self, signal_processor):
         self.signal_processor = signal_processor
+
+    def split_into_frames_with_hop(self, fragment, frame_length, hop_length):
+        
+        if len(fragment) < frame_length:
+            raise ValueError("Fragment length is less than frame length.")
+        n_samples = len(fragment)
+        n_frames = (n_samples - frame_length) // hop_length + 1
+        frames = []
+
+        for i in range(n_frames):
+            start = i * hop_length
+            end = start + frame_length
+            if end > n_samples:
+                end = n_samples
+            if end - start < frame_length:
+                break
+
+            frames.append(fragment[start:end])
+        
+        return np.array(frames)    
     
     def generate(self, start_sample, end_sample, frame_length, hop_length, window_type='hann'):
         signal = self.signal_processor.data
@@ -70,27 +92,19 @@ class SpectogramGenerator:
         fragment = signal[start_sample:end_sample]
         if len(fragment) < frame_length:
             raise ValueError("Fragment length is less than frame length.")
-        n_samples = len(fragment)
-        n_frames = (n_samples - frame_length) // hop_length + 1
+
         spectogram = []
-
-        for i in range(n_frames):
-            start = i * hop_length
-            end = start + frame_length
-            if end > n_frames:
-                end = n_samples
-            if end - start < frame_length:
-                break
-
-            
-            windowed_frame = self.signal_processor.apply_window(window_type, frame_start=start, frame_end=end)[0]
-            fft_result = fft(windowed_frame)
-            magnitude_spectrum = np.abs(fft_result[:frame_length // 2 + 1])
+        frames = self.split_into_frames_with_hop(fragment, frame_length, hop_length)
+        for frame in frames:
+            windowed_frame, _ = self.signal_processor.apply_window(window_type, frame=frame)
+            ft = fft(windowed_frame)
+            magnitude_spectrum = np.abs(ft)[:len(ft) // 2]
             spectogram.append(magnitude_spectrum)
+
         
         self.spectogram_data = np.array(spectogram).T
-        self.frequencies = fftfreq(frame_length, 1 / sample_rate)[:frame_length // 2 + 1]
-        self.times = np.arange(n_frames) * hop_length / sample_rate
+        self.frequencies = fftfreq(frame_length, 1 / sample_rate)[:frame_length // 2 ]
+        self.times = np.arange(len(frames)) * hop_length / sample_rate
         
         return self.spectogram_data, self.frequencies, self.times
     
@@ -99,27 +113,23 @@ class SpectogramGenerator:
             raise ValueError("Spectrogram data not generated. Call generate() first.")
         
         spectrogram_to_plot = self.spectogram_data
+        ref_spectrum = np.max(spectrogram_to_plot)
+        spectrogram_db = 10 * np.log10(spectrogram_to_plot + 1e-10)
+  
+        fig, ax = plt.subplots()
         if db_scale:
-            spectrogram_db = 10 * np.log10(spectrogram_to_plot + 1e-10)
-            data = go.Heatmap(
-                z=spectrogram_db,
-                x=self.times,
-                y=self.frequencies,
-                colorscale='Viridis',
-                colorbar=dict(title='Magnitude (dB)'),
-            )
+            
+            c = ax.pcolormesh(self.times, self.frequencies, spectrogram_db, cmap='viridis', shading='auto')
+            ax.set_title('Spectrogram (dB)')
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Frequency (Hz)')
+            fig.colorbar(c, ax=ax, label='Magnitude (dB)')
         else:
-            data = go.Heatmap(
-                z=spectrogram_to_plot,
-                x=self.times,
-                y=self.frequencies,
-                colorscale='Viridis',
-                colorbar=dict(title='Magnitude'),
-            )
-        layout = go.Layout(
-            title='Spectrogram',
-            xaxis=dict(title='Time (s)'),
-            yaxis=dict(title='Frequency (Hz)')
-        )
-        fig = go.Figure(data=[data], layout=layout)
+         
+            c = ax.pcolormesh(self.times, self.frequencies, spectrogram_to_plot, cmap='viridis', shading='auto')
+            ax.set_title('Spectrogram')
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Frequency (Hz)')
+            fig.colorbar(c, ax=ax, label='Magnitude')
+        
         return fig

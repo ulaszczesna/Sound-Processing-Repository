@@ -88,4 +88,5 @@ if uploaded_file is not None:
         spectrogram_generator = SpectogramGenerator(window_processor)
         spectrogram_data, frequencies, times = spectrogram_generator.generate(start_sample, end_sample, frame_length, hop_size, window_type=window_function_spect)
         db = st.sidebar.checkbox('dB scale', True)
-        st.plotly_chart(spectrogram_generator.plot_spectrogram(db_scale=db))
+        # st.plotly_chart(spectrogram_generator.plot_spectrogram(db_scale=db))
+        st.pyplot(spectrogram_generator.plot_spectrogram(db_scale=db))
