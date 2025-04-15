@@ -31,8 +31,10 @@ if uploaded_file is not None:
     st.plotly_chart(plot_waveform(data, rate, start_sample, end_sample))
 
     st.subheader('📊 Continuous Spectrum')
-    spectrum, _ = continous_spectrum(data, rate, frame_ms, start_sample, end_sample)
-    st.plotly_chart(plot_spectrum(spectrum, rate, frame_size))
+    db_scale = st.checkbox('dB scale', True)
+    data_to_plot = chose_frame(data, rate, time_range[0], time_range[1])
+
+    st.plotly_chart(plot_fft_signal(data_to_plot, rate, db_scale=db_scale))
 
     fequency_features = st.sidebar.selectbox('Frequency features', options=('Volume', 'Frequency Centroid', 'Effective Bandwidth', 'Spectral Flatness Measure'), key='features')
     frequency_feature = FreqencyDomainFeatures(data, rate, start=start_sample, end=end_sample, frame_ms=frame_ms)
@@ -74,7 +76,14 @@ if uploaded_file is not None:
         window_processor = SignalProcessor(data, rate)
         windowed_signal, frame = window_processor.apply_window(window_function, frame_start=start_sample, frame_end=end_sample)
         st.subheader('📊 Windowed Signal')
-        st.plotly_chart(plot_fft_signal(windowed_signal, rate))
+        colum1, column2 = st.columns(2)
+        with colum1:
+            st.subheader('FFT Signal')
+            st.plotly_chart(plot_fft_signal(data_to_plot, rate, db_scale=db_scale), key='fft_signal')
+        with column2:
+            st.subheader('Windowed Signal')
+            st.plotly_chart(plot_fft_signal(windowed_signal, rate))
+        
         st.plotly_chart(plot_waveform_window(data, windowed_signal, start_sample, end_sample, rate))
     
     spectrogram_on = st.sidebar.toggle('Spectrogram', False)

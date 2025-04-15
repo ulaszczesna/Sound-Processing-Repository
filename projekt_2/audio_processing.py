@@ -27,13 +27,24 @@ def plot_spectrum(spectrum, rate, frame_size):
     fig.update_layout(title="Continuous Spectrum", xaxis_title="Frequency [Hz]", yaxis_title="Magnitude")
     return fig
 
-def plot_fft_signal(data, rate):
-    fft_result = np.fft.fft(data)
-    freq = np.fft.fftfreq(len(data), d=1/rate)
+def chose_frame(data, rate, start, end):
+    start_sample = int(start * rate)
+    end_sample = int(end * rate)
+    return data[start_sample:end_sample]
 
+def plot_fft_signal(data, rate, db_scale=True):
+    
+    fft_result = np.fft.rfft(data)
+    freq = np.fft.rfftfreq(len(data), d=1/rate)
+
+    magnitude = np.abs(fft_result) / len(data)
+    if db_scale:
+        magnitude = 20 * np.log10(magnitude + 1e-10)  # Avoid log(0)
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=freq[:len(data) // 2], y=np.abs(fft_result[:len(data) // 2]), mode='lines', name="FFT Signal"))
-    fig.update_layout(title="FFT Signal", xaxis_title="Frequency [Hz]", yaxis_title="Magnitude")
+    fig.add_trace(go.Scatter(x=freq, y=magnitude, mode='lines', name="FFT Signal"))
+    fig.update_layout(title="FFT Signal (dB)" if db_scale else "FFT Signal ",
+                       xaxis_title="Frequency [Hz]",
+                         yaxis_title="Magnitude (db)" if db_scale else "Magnitude")
     return fig
 
 def plot_waveform(data, rate, start=0, end=None):
