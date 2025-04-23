@@ -3,23 +3,15 @@ from scipy.stats import gmean
 import plotly.graph_objects as go
 
 class FreqencyDomainFeatures:
-    def __init__(self, data, rate, start=0, end=None, frame_ms=20):
-        if end is None:
-            end = len(data)
-        self.data = data
-        self.rate = rate
-        self.start = start
-        self.end = end
-        self.frame_ms = frame_ms
-        self.frame_size = int(frame_ms * rate / 1000)
-        self.frames = self._split_into_frames(data[self.start:self.end])
-        self.spectrum = np.array([np.abs(np.fft.fft(frame))[:self.frame_size // 2 + 1] for frame in self.frames])
-        self.frequencies = np.fft.fftfreq(self.frame_size, d=1/rate)[:self.frame_size // 2 + 1]
+    def __init__(self, signalprocessor):
+        self.data = signalprocessor.audio
+        self.rate = signalprocessor.sample_rate
+        self.frame_ms = signalprocessor.frame_ms
+        self.frame_size = signalprocessor.frame_size
+        self.frames = signalprocessor.split_into_frames()
+        self.spectrum = np.array([np.abs(np.fft.fft(frame))[:self.frame_size // 2] for frame in self.frames])
+        self.frequencies = np.fft.fftfreq(self.frame_size, d=1/self.rate)[:self.frame_size // 2]
 
-    def _split_into_frames(self, data):
-        num_frames = len(data) // self.frame_size
-        frames = np.array([data[i * self.frame_size: (i + 1) * self.frame_size] for i in range(num_frames)])
-        return frames
     
     def volume(self):
         return np.array([np.sum(np.abs(frame_spectrum) ** 2) / self.frame_size for frame_spectrum in self.spectrum])

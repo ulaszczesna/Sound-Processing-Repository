@@ -1,7 +1,8 @@
 import streamlit as st
 from audio_processing import *
-from window_functions import *
+
 from freqency_features import *
+from temp import *
 
 st.title('🎵 Audio Analysis App')
 
@@ -20,7 +21,8 @@ if uploaded_file is not None:
     frame_ms = st.sidebar.slider('Frame size (ms)', 10, 50, 20)
     frame_size = int(frame_ms * rate / 1000)
     time_range = st.sidebar.slider("Select time range (s)", 0.0, float(audio_duration), (0.0, float(audio_duration)), step=0.1)
-
+    hop = st.sidebar.slider('Hop size (ms)', 1, 50, 10)
+    hop_size = int(hop * rate / 1000)
     start_sample = int(time_range[0] * rate)
     end_sample = int(time_range[1] * rate)
     
@@ -35,9 +37,10 @@ if uploaded_file is not None:
     data_to_plot = chose_frame(data, rate, time_range[0], time_range[1])
 
     st.plotly_chart(plot_fft_signal(data_to_plot, rate, db_scale=db_scale))
+    adudioprocessor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size) 
 
     fequency_features = st.sidebar.selectbox('Frequency features', options=('Volume', 'Frequency Centroid', 'Effective Bandwidth', 'Spectral Flatness Measure'), key='features')
-    frequency_feature = FreqencyDomainFeatures(data, rate, start=start_sample, end=end_sample, frame_ms=frame_ms)
+    frequency_feature = FreqencyDomainFeatures(adudioprocessor)
 
     st.subheader(f'📊 {fequency_features}')
     if fequency_features == 'Volume':
@@ -73,8 +76,9 @@ if uploaded_file is not None:
     if window_on:
         window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
                                                                 'hamming', 'hann', 'blackman'), key='window')
-        window_processor = SignalProcessor(data, rate)
-        windowed_signal, frame = window_processor.apply_window(window_function, frame_start=start_sample, frame_end=end_sample)
+        window_processor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size)
+        windowed_frames = window_processor.apply_window(window_function)
+        
         st.subheader('📊 Windowed Signal')
         colum1, column2 = st.columns(2)
         with colum1:
@@ -82,20 +86,17 @@ if uploaded_file is not None:
             st.plotly_chart(plot_fft_signal(data_to_plot, rate, db_scale=db_scale), key='fft_signal')
         with column2:
             st.subheader('Windowed Signal')
-            st.plotly_chart(plot_fft_signal(windowed_signal, rate))
+            st.plotly_chart(plot_fft_signal(windowed_frames, rate))
         
-        st.plotly_chart(plot_waveform_window(data, windowed_signal, start_sample, end_sample, rate))
+        st.plotly_chart(plot_waveform_window(data, windowed_frames, start_sample, end_sample, rate))
     
     spectrogram_on = st.sidebar.toggle('Spectrogram', False)
     if spectrogram_on:
         st.subheader('📊 Spectrogram')
-        window_processor = SignalProcessor(data, rate)
+        window_processor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size)
         window_function_spect = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 'hamming', 'hann', 'blackman'), key='spectrogram')
-        frame_length = int(frame_ms * rate / 1000)
-        hop = st.sidebar.slider('Hop size (ms)', 1, 50, 10)
-        hop_size = int(hop * rate / 1000)
-        spectrogram_generator = SpectogramGenerator(window_processor)
-        spectrogram_data, frequencies, times = spectrogram_generator.generate(start_sample, end_sample, frame_length, hop_size, window_type=window_function_spect)
-        db = st.sidebar.checkbox('dB scale', True)
-        # st.plotly_chart(spectrogram_generator.plot_spectrogram(db_scale=db))
+        spectrogram_generator = SpectrogramGenerator(adudioprocessor)
+        spectrogram_data, frequencies, times = spectrogram_generator.generate(window_type=window_function_spect)
+        db = st.sidebar.checkbox('dB scale', True, key='db')
+      
         st.pyplot(spectrogram_generator.plot_spectrogram(db_scale=db))
