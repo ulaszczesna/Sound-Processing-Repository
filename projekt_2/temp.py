@@ -82,7 +82,7 @@ class SpectrogramGenerator:
    
         if db_scale:
             
-            c = ax.pcolormesh(self.times, self.frequencies, spectrogram_db, cmap='viridis', shading='auto', vmin=-70, vmax=0)
+            c = ax.pcolormesh(self.times, self.frequencies, spectrogram_db, cmap='magma', shading='auto', vmin=-70, vmax=0)
             ax.set_title('Spectrogram (dB)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Frequency (Hz)')
@@ -90,7 +90,7 @@ class SpectrogramGenerator:
             ax.set_ylim([0, 4000])
         else:
          
-            c = ax.pcolormesh(self.times, self.frequencies, spectrogram_to_plot, cmap='viridis', shading='auto')
+            c = ax.pcolormesh(self.times, self.frequencies, spectrogram_to_plot, cmap='magma', shading='auto')
             ax.set_title('Spectrogram')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Frequency (Hz)')
