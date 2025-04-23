@@ -25,7 +25,11 @@ if uploaded_file is not None:
     hop_size = int(hop * rate / 1000)
     start_sample = int(time_range[0] * rate)
     end_sample = int(time_range[1] * rate)
-    
+    window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
+                                                                'hamming', 'hann', 'blackman'), key='window')
+    adudioprocessor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size)
+    windowed_frames = adudioprocessor.apply_window(window_function)
+
     st.write(f'📌 **Częstotliwość próbkowania:** {rate} Hz')
     st.audio(uploaded_file)
 
@@ -34,13 +38,15 @@ if uploaded_file is not None:
 
     st.subheader('📊 Continuous Spectrum')
     db_scale = st.checkbox('dB scale', True)
-    data_to_plot = chose_frame(data, rate, time_range[0], time_range[1])
+    # data_to_plot = chose_frame(data, rate, time_range[0], time_range[1])
+    orginal_audio = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size)
+    data_to_plot = orginal_audio.split_into_frames()
 
-    st.plotly_chart(plot_fft_signal(data_to_plot, rate, db_scale=db_scale))
-    adudioprocessor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size) 
-
-    fequency_features = st.sidebar.selectbox('Frequency features', options=('Volume', 'Frequency Centroid', 'Effective Bandwidth', 'Spectral Flatness Measure'), key='features')
-    frequency_feature = FreqencyDomainFeatures(adudioprocessor)
+    st.plotly_chart(plot_fft_signal_frames(data_to_plot, rate, db_scale=db_scale))
+    
+    fequency_features = st.sidebar.selectbox('Frequency features', options=('Volume', 'Frequency Centroid', 'Effective Bandwidth', 
+                                                                            'Spectral Flatness Measure','Spectral Crest', 'Band Energies', 'Band Energies Ratio'), key='features')
+    frequency_feature = FreqencyDomainFeatures(adudioprocessor, window_type=window_function)
 
     st.subheader(f'📊 {fequency_features}')
     if fequency_features == 'Volume':
@@ -62,6 +68,18 @@ if uploaded_file is not None:
         flatness_measure = frequency_feature.spectral_flatness_meassure()
         flatness_measure_plotter = FrequencyDomainPlotter(frequency_feature)
         st.plotly_chart(flatness_measure_plotter.plot_spectral_flatness_measure())
+    elif fequency_features == 'Band Energies':
+        band_energies = frequency_feature.band_energies()
+        band_energies_plotter = FrequencyDomainPlotter(frequency_feature)
+        st.plotly_chart(band_energies_plotter.plot_band_energies())
+    elif fequency_features == 'Band Energies Ratio':
+        band_energies_ratio = frequency_feature.band_energy_ratios()
+        band_energies_ratio_plotter = FrequencyDomainPlotter(frequency_feature)
+        st.plotly_chart(band_energies_ratio_plotter.plot_band_energy_ratios())
+    elif fequency_features == 'Spectral Crest':
+        spectral_crest = frequency_feature.spectral_crest()
+        spectral_crest_plotter = FrequencyDomainPlotter(frequency_feature)
+        st.plotly_chart(spectral_crest_plotter.plot_spectral_crest())
 
  
     # if volume_plot:
@@ -74,29 +92,29 @@ if uploaded_file is not None:
     
     window_on = st.sidebar.toggle('Window function', False)
     if window_on:
-        window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
-                                                                'hamming', 'hann', 'blackman'), key='window')
-        window_processor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size)
-        windowed_frames = window_processor.apply_window(window_function)
+        # window_function = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 
+        #                                                         'hamming', 'hann', 'blackman'), key='window')
+        # window_processor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size)
+        # windowed_frames = window_processor.apply_window(window_function)
         
         st.subheader('📊 Windowed Signal')
         colum1, column2 = st.columns(2)
         with colum1:
             st.subheader('FFT Signal')
-            st.plotly_chart(plot_fft_signal(data_to_plot, rate, db_scale=db_scale), key='fft_signal')
+            st.plotly_chart(plot_fft_signal_frames(data_to_plot, rate, db_scale=db_scale), key='fft_signal')
         with column2:
             st.subheader('Windowed Signal')
-            st.plotly_chart(plot_fft_signal(windowed_frames, rate))
+            st.plotly_chart(plot_fft_signal_frames(windowed_frames, rate, db_scale=db_scale), key='windowed_signal')
         
         st.plotly_chart(plot_waveform_window(data, windowed_frames, start_sample, end_sample, rate))
     
     spectrogram_on = st.sidebar.toggle('Spectrogram', False)
     if spectrogram_on:
         st.subheader('📊 Spectrogram')
-        window_processor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size)
-        window_function_spect = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 'hamming', 'hann', 'blackman'), key='spectrogram')
+        # window_processor = SignalProcessor(data, rate, start_sample, end_sample, frame_ms=frame_ms, hop_size=hop_size)
+        # window_function_spect = st.sidebar.selectbox('Choose window function', options=('rectangular', 'triangular', 'hamming', 'hann', 'blackman'), key='spectrogram')
         spectrogram_generator = SpectrogramGenerator(adudioprocessor)
-        spectrogram_data, frequencies, times = spectrogram_generator.generate(window_type=window_function_spect)
+        spectrogram_data, frequencies, times = spectrogram_generator.generate(window_type=window_function)
         db = st.sidebar.checkbox('dB scale', True, key='db')
       
         st.pyplot(spectrogram_generator.plot_spectrogram(db_scale=db))

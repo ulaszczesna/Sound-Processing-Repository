@@ -42,8 +42,10 @@ class SignalProcessor:
             return WindowFunction.triangular(N)
         elif window_type == 'blackman':
             return WindowFunction.blackman(N)
+        elif window_type == 'triangular':
+            return WindowFunction.triangular(N)
         else:
-            raise ValueError("Not valid window type! Choose: rectangular, triangular, hamming, hann")
+            raise ValueError("Not valid window type! Choose: rectangular, triangular, hamming, hann, triangular, blackman")
         
 
 class SpectrogramGenerator:

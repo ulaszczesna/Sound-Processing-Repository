@@ -23,6 +23,11 @@ class WindowFunction:
     @staticmethod
     def blackman(N):
         return 0.42 - 0.5 * np.cos(2 * np.pi * np.arange(N) / (N - 1)) + 0.08 * np.cos(4 * np.pi * np.arange(N) / (N - 1))
+    
+    @staticmethod
+    def triangular(N):
+        return 1 - np.abs((np.arange(N) - (N - 1) / 2) / ((N - 1) / 2))
+
 
 
 # class SignalProcessor:
