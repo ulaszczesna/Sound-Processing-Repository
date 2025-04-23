@@ -46,6 +46,12 @@ class SignalProcessor:
             return WindowFunction.triangular(N)
         else:
             raise ValueError("Not valid window type! Choose: rectangular, triangular, hamming, hann, triangular, blackman")
+    
+    # sum window
+    def sum_window(self, window_type):
+        window = self._get_window(window_type, self.frame_size)
+        window_sum = np.sum(window)
+        return window_sum
         
 
 class SpectrogramGenerator:

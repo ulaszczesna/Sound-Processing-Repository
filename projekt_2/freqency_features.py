@@ -13,6 +13,7 @@ class FreqencyDomainFeatures:
         self.spectrum = np.array([np.abs(np.fft.fft(frame))[:self.frame_size // 2] for frame in self.frames])
         self.frequencies = np.fft.fftfreq(self.frame_size, d=1/self.rate)[:self.frame_size // 2]
         self.windowed_frames = signalprocessor.apply_window(window_type)
+        self.window_sum = signalprocessor.sum_window(window_type)
 
     
     def volume(self):
@@ -45,6 +46,7 @@ class FreqencyDomainFeatures:
         bands = [(0, 630), (630, 1720), (1720, 4400), (4400, 11025)]
         band_energies = {i: [] for i in range(len(bands))}
         windowed_frames = self.windowed_frames
+        window_sum = self.window_sum
 
         for frame in windowed_frames:
 
@@ -54,7 +56,7 @@ class FreqencyDomainFeatures:
             power = magnitude_spectrum ** 2
             for i, (low, high) in enumerate(bands):
                 band_mask = (freqs >= low) & (freqs < high)
-                band_energy = np.sum(power[band_mask])
+                band_energy = np.sum(power[band_mask]) / window_sum
                 band_energies[i].append(band_energy)
         return band_energies
 
