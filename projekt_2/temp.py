@@ -79,13 +79,15 @@ class SpectrogramGenerator:
         spectrogram_db = 10 * np.log10(spectrogram_to_plot + 1e-10)
   
         fig, ax = plt.subplots()
+   
         if db_scale:
             
-            c = ax.pcolormesh(self.times, self.frequencies, spectrogram_db, cmap='viridis', shading='auto')
+            c = ax.pcolormesh(self.times, self.frequencies, spectrogram_db, cmap='viridis', shading='auto', vmin=-70, vmax=0)
             ax.set_title('Spectrogram (dB)')
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Frequency (Hz)')
             fig.colorbar(c, ax=ax, label='Magnitude (dB)')
+            ax.set_ylim([0, 4000])
         else:
          
             c = ax.pcolormesh(self.times, self.frequencies, spectrogram_to_plot, cmap='viridis', shading='auto')
